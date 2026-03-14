@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Flow | Condensed</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --glass: rgba(15, 23, 42, 0.6);
+            --border: rgba(255, 255, 255, 0.08);
+            --primary: #60a5fa;
+            --secondary: #c084fc;
+            --accent: #f472b6;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 2rem;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(96, 165, 250, 0.15) 0, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(192, 132, 252, 0.15) 0, transparent 50%);
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Premium Heading */
+        .header h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -0.05em;
+            background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            opacity: 0.5;
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        /* Glass Card */
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        }
+
+        /* Form Styling */
+        .form-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            background: rgba(255,255,255,0.03);
+            padding: 1rem;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+
+        input, select {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 0.8rem;
+            border-radius: 12px;
+            font-family: inherit;
+        }
+
+        input[type="text"] { flex: 1; }
+
+        button.add-btn {
+            background: white;
+            color: var(--bg);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        button.add-btn:hover { transform: scale(1.05); }
+
+        /* Task Item */
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s;
+        }
+
+        .task-item:hover {
+            background: rgba(255,255,255,0.05);
+            transform: translateX(5px);
+        }
+
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .checkbox.done {
+            background: #10b981;
+            border-color: #10b981;
+        }
+
+        .task-content { flex: 1; }
+        .task-title { font-weight: 500; font-size: 1.1rem; }
+        .task-title.done { text-decoration: line-through; opacity: 0.4; }
+        
+        .tag {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .tag.High { color: #f87171; background: rgba(248,113,113,0.1); }
+        .tag.Medium { color: #fbbf24; background: rgba(251,191,36,0.1); }
+        .tag.Low { color: #60a5fa; background: rgba(96,165,250,0.1); }
+
+        .delete-btn {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .task-item:hover .delete-btn { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function App() {
+            const [tasks, setTasks] = useState([]);
+            const [title, setTitle] = useState('');
+            const [priority, setPriority] = useState('Medium');
+            const [estimate, setEstimate] = useState('30 mins');
+            const [stats, setStats] = useState({ total: 0, completed: 0 });
+
+            useEffect(() => {
+                fetchData();
+            }, []);
+
+            const fetchData = async () => {
+                const [tRes, sRes] = await Promise.all([
+                    fetch('/api/tasks'),
+                    fetch('/api/stats')
+                ]);
+                setTasks(await tRes.json());
+                setStats(await sRes.json());
+            };
+
+            const addTask = async (e) => {
+                e.preventDefault();
+                if (!title) return;
+                await fetch('/api/tasks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, priority, estimate })
+                });
+                setTitle('');
+                fetchData();
+            };
+
+            const toggleTask = async (id, done) => {
+                await fetch(`/api/tasks/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ completed: !done })
+                });
+                fetchData();
+            };
+
+            const deleteTask = async (id) => {
+                await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+                fetchData();
+            };
+
+            return (
+                <div className="app-container">
+                    <div className="header">
+                        <h1>Daily Flow</h1>
+                        <p className="subtitle">Focus on what matters. {stats.completed}/{stats.total} Finished</p>
+                    </div>
+
+                    <div className="glass-card">
+                        <form className="form-group" onSubmit={addTask}>
+                            <input 
+                                type="text" 
+                                placeholder="What's on your mind?" 
+                                value={title}
+                                onChange={e => setTitle(e.target.value)}
+                            />
+                            <select value={priority} onChange={e => setPriority(e.target.value)}>
+                                <option>High</option>
+                                <option>Medium</option>
+                                <option>Low</option>
+                            </select>
+                            <button className="add-btn">Add Task</button>
+                        </form>
+
+                        <div className="task-list">
+                            {tasks.map(task => (
+                                <div key={task._id} className="task-item">
+                                    <div 
+                                        className={`checkbox ${task.completed ? 'done' : ''}`}
+                                        onClick={() => toggleTask(task._id, task.completed)}
+                                    >
+                                        {task.completed && '✓'}
+                                    </div>
+                                    <div className="task-content">
+                                        <div className={`task-title ${task.completed ? 'done' : ''}`}>{task.title}</div>
+                                        <div style={{display: 'flex', gap: '0.5rem', marginTop: '0.2rem'}}>
+                                            <span className={`tag ${task.priority}`}>{task.priority}</span>
+                                            <span style={{opacity: 0.3, fontSize: '0.8rem'}}>{task.estimate}</span>
+                                        </div>
+                                    </div>
+                                    <button className="delete-btn" onClick={() => deleteTask(task._id)}>✕</button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
